@@ -8,6 +8,33 @@ export interface Accommodation { id: string; nome: string; tipo: AccommodationTy
 export interface FoodEstablishment { id: string; nome: string; tipo: FoodType; regiao: string; bairro: string; fotos: string[]; contacto: string; estado: "Ativo" | "Inativo"; }
 export interface Dish { id: string; estabelecimento_id: string; nome: string; categoria_prato: DishCategory; descricao: string; preco: number; foto: string; ordem: number; estado: "Disponível" | "Indisponível"; }
 
+export interface OrderItemSnapshot {
+  catalogo_id: string;
+  nome: string;
+  preco: number;
+  categoria: string;
+}
+
+export interface TravelRequestSnapshot {
+  id: string;
+  createdAt: string;
+  origin: string;
+  destination: string;
+  traveller: string;
+  reason: string;
+  data_ida: string;
+  data_volta: string;
+  dias_transporte: number;
+  noites_hospedagem: number;
+  itens_pedido: {
+    transporte: (OrderItemSnapshot & { quantidade: number }) | null;
+    hospedagem: (OrderItemSnapshot & { quantidade: number }) | null;
+    alimentacao: OrderItemSnapshot[];
+  };
+  notas_automaticas: string[];
+  total: number;
+}
+
 const KEY = "corporate-travel-catalog-v1";
 const seed = {
   veiculos: [
@@ -49,11 +76,17 @@ export function saveCatalog(data: CatalogData) {
 
 export function catalogForRegion(region: string) {
   const data = getCatalog();
-  const normalized = region.trim().toLocaleLowerCase();
+  const requested = region.trim();
+  const hasExactRegion = requested.length > 0 && [
+    ...data.veiculos.flatMap(v => v.regioes),
+    ...data.hospedagens.map(h => h.regiao),
+    ...data.estabelecimentos.map(e => e.regiao)
+  ].some(r => r.trim() === requested);
   return {
-    veiculos: data.veiculos.filter(v => v.estado === "Ativo" && v.regioes.some(r => r.toLocaleLowerCase() === normalized)),
-    hospedagens: data.hospedagens.filter(h => h.estado === "Ativo" && h.regiao.toLocaleLowerCase() === normalized),
-    estabelecimentos: data.estabelecimentos.filter(e => e.estado === "Ativo" && e.regiao.toLocaleLowerCase() === normalized && data.pratos.some(p => p.estabelecimento_id === e.id && p.estado === "Disponível"))
+    matchedRegion: hasExactRegion,
+    veiculos: hasExactRegion ? data.veiculos.filter(v => v.estado === "Ativo" && v.regioes.some(r => r.trim() === requested)) : [],
+    hospedagens: hasExactRegion ? data.hospedagens.filter(h => h.estado === "Ativo" && h.regiao.trim() === requested) : [],
+    estabelecimentos: hasExactRegion ? data.estabelecimentos.filter(e => e.estado === "Ativo" && e.regiao.trim() === requested && data.pratos.some(p => p.estabelecimento_id === e.id && p.estado === "Disponível")) : []
   };
 }
 
