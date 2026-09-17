@@ -1,258 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import {
-  ArrowRight,
-  CalendarDays,
-  Car,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  CircleDollarSign,
-  FileText,
-  Hotel,
-  MapPin,
-  Menu,
-  Plus,
-  ReceiptText,
-  Utensils,
-  X,
-} from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, CalendarDays, Car, Check, ChevronLeft, ChevronRight, CircleDollarSign, FileText, Hotel, MapPin, Menu, Plus, ReceiptText, Utensils, X } from "lucide-react";
+import { catalogForRegion, getCatalog, type Accommodation, type Vehicle, type FoodEstablishment, type Dish } from "../lib/catalog";
 
 export const Route = createFileRoute("/")({ component: TravelHome });
+type Step=1|2|3|4|5;
+const steps=[{id:1,label:"Deslocação",icon:MapPin},{id:2,label:"Transporte",icon:Car},{id:3,label:"Hospedagem",icon:Hotel},{id:4,label:"Alimentação",icon:Utensils},{id:5,label:"Revisão",icon:FileText}] as const;
+const money=(n:number)=>`${n.toLocaleString("pt-MZ")} MT`;
 
-type Step = 1 | 2 | 3 | 4 | 5;
-
-const steps = [
-  { id: 1, label: "Deslocação", icon: MapPin },
-  { id: 2, label: "Transporte", icon: Car },
-  { id: 3, label: "Hospedagem", icon: Hotel },
-  { id: 4, label: "Alimentação", icon: Utensils },
-  { id: 5, label: "Revisão", icon: FileText },
-] as const;
-
-const recentRequests = [
-  { id: "CT-2026-0184", trip: "Visita ao projeto de Nampula", person: "Marta Joaquim", date: "18–21 Set", total: "128.400 MZN", status: "Aguardando aprovação" },
-  { id: "CT-2026-0181", trip: "Reunião operacional", person: "Carlos Matola", date: "22–23 Set", total: "46.800 MZN", status: "Em revisão" },
-  { id: "CT-2026-0175", trip: "Auditoria regional", person: "Ana Ernesto", date: "25–29 Set", total: "91.250 MZN", status: "Aprovado" },
-];
-
-const vehicles = [
-  { name: "Toyota Corolla", category: "Económico", capacity: "4 lugares", price: 4200, image: "https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=900&q=80" },
-  { name: "Toyota Fortuner", category: "SUV", capacity: "7 lugares", price: 7200, image: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=900&q=80" },
-  { name: "Toyota Hiace", category: "Van 7 lugares", capacity: "8 lugares", price: 8500, image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=900&q=80" },
-];
-
-const hotels = [
-  { name: "Hotel Nampula Central", location: "Centro de Nampula", price: 6800, badge: "Pequeno-almoço incluído", image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80" },
-  { name: "Ruby Backpackers", location: "Nampula", price: 5200, badge: "Estacionamento", image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=900&q=80" },
-  { name: "Grand Plaza", location: "Bairro Central", price: 8400, badge: "Pequeno-almoço incluído", image: "https://images.unsplash.com/photo-1601918774946-25832a4be0d6?auto=format&fit=crop&w=900&q=80" },
-];
-
-function money(value: number) {
-  return `${value.toLocaleString("pt-MZ")} MZN`;
+function TravelHome(){
+ const [open,setOpen]=useState(false),[step,setStep]=useState<Step>(1),[origin,setOrigin]=useState("Maputo"),[destination,setDestination]=useState("Maputo"),[traveller,setTraveller]=useState(""),[reason,setReason]=useState(""),[transport,setTransport]=useState<Vehicle|null>(null),[hotel,setHotel]=useState<Accommodation|null>(null),[food,setFood]=useState<FoodEstablishment|null>(null),[catalogVersion,setCatalogVersion]=useState(0);
+ useEffect(()=>{const fn=()=>setCatalogVersion(v=>v+1);window.addEventListener("catalog-updated",fn);return()=>window.removeEventListener("catalog-updated",fn)},[]);
+ const options=useMemo(()=>catalogForRegion(destination),[destination,catalogVersion]);
+ useEffect(()=>{if(transport&&!options.veiculos.some(v=>v.id===transport.id))setTransport(null);if(hotel&&!options.hospedagens.some(h=>h.id===hotel.id))setHotel(null);if(food&&!options.estabelecimentos.some(e=>e.id===food.id))setFood(null)},[destination,catalogVersion]);
+ const total=(transport?transport.preco_dia*4:0)+(hotel?hotel.preco_noite*3:0);
+ function close(){setOpen(false);setStep(1)}
+ function submit(){const snapshot={id:`CT-${Date.now()}`,createdAt:new Date().toISOString(),origin,destination,traveller,reason,vehicle:transport?{id:transport.id,nome:transport.nome,preco_dia:transport.preco_dia}:null,hotel:hotel?{id:hotel.id,nome:hotel.nome,preco_noite:hotel.preco_noite}:null,food:food?{id:food.id,nome:food.nome}:null,total,emptyTransport:options.veiculos.length===0,emptyHotel:options.hospedagens.length===0,emptyFood:options.estabelecimentos.length===0};localStorage.setItem(`travel-request-${snapshot.id}`,JSON.stringify(snapshot));alert("Pedido criado e enviado para revisão da agência.");close()}
+ return <div className="min-h-screen bg-[#f8f8f6] text-[#252525]"><header className="sticky top-0 z-30 border-b border-[#e6e3de] bg-white/95 backdrop-blur"><div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 lg:px-8"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#CD0219] text-sm font-bold text-white">CT</div><div><div className="font-semibold">Corporate Travel</div><div className="text-[11px] text-[#77736d]">Gestão de viagens empresariais</div></div></div><nav className="hidden items-center gap-7 text-sm text-[#62605b] md:flex"><span className="font-medium text-[#252525]">Visão geral</span><span>Pedidos</span><span>Faturas</span><span>Relatórios</span></nav><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><div className="text-sm font-medium">Empresa Exemplo, Lda.</div><div className="text-[11px] text-[#77736d]">Aprovador financeiro</div></div><div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#eeeae5] text-sm font-semibold">EE</div><Menu size={19} className="md:hidden"/></div></div></header>
+ <main className="mx-auto max-w-[1400px] px-5 py-8 lg:px-8"><div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="mb-2 text-sm font-medium text-[#CD0219]">Painel da empresa</p><h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">Bom dia. O que precisa de organizar?</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#706d67]">Monte uma viagem completa num único pedido. A agência prepara a cotação e acompanha o processo consigo.</p></div><div className="flex gap-2"><Link to="/admin/catalog" className="hidden rounded-lg border border-[#ddd9d3] px-4 py-2.5 text-sm font-medium md:inline-flex">Catálogo admin</Link><button onClick={()=>setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#CD0219] px-5 text-sm font-semibold text-white hover:bg-[#a90115]"><Plus size={18}/> Novo Pedido de Viagem</button></div></div><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={ReceiptText} label="Pedidos este mês" value="18" detail="+4 face ao mês anterior"/><Metric icon={CircleDollarSign} label="Gasto este mês" value="1.284.600 MT" detail="23% do orçamento mensal"/><Metric icon={FileText} label="Faturas pendentes" value="4" detail="2 vencem esta semana" alert/><Metric icon={CalendarDays} label="Próximas viagens" value="7" detail="Nos próximos 30 dias"/></section><section className="mt-8 grid gap-6 xl:grid-cols-[1fr_330px]"><div className="rounded-xl border border-[#e5e2dc] bg-white"><div className="border-b px-5 py-4"><h2 className="font-semibold">Pedidos recentes</h2><p className="mt-1 text-xs text-[#817d76]">Acompanhe os pedidos da sua empresa</p></div>{["CT-2026-0184","CT-2026-0181","CT-2026-0175"].map((id,i)=><div key={id} className="grid gap-2 border-b px-5 py-4 last:border-0 md:grid-cols-[120px_1fr_140px_145px] md:items-center"><span className="text-xs font-semibold text-[#6e6a64]">{id}</span><div><div className="text-sm font-medium">{["Visita ao projeto de Nampula","Reunião operacional","Auditoria regional"][i]}</div><div className="mt-1 text-xs text-[#817d76]">{["Marta Joaquim · 18–21 Set","Carlos Matola · 22–23 Set","Ana Ernesto · 25–29 Set"][i]}</div></div><span className="text-sm font-semibold md:text-right">{["128.400 MT","46.800 MT","91.250 MT"][i]}</span><Status label={["Aguardando aprovação","Em revisão","Aprovado"][i]}/></div>)}</div><aside className="rounded-xl border border-[#e5e2dc] bg-white p-5"><h2 className="font-semibold">Limite de crédito</h2><p className="mt-1 text-xs text-[#817d76]">Condições atuais da empresa</p><div className="mt-6 flex justify-between text-sm"><span>Disponível</span><strong>3.715.400 MT</strong></div><div className="mt-3 h-2 rounded-full bg-[#eeeae5]"><div className="h-full w-[54%] rounded-full bg-[#CD0219]"/></div><div className="mt-2 flex justify-between text-[11px] text-[#817d76]"><span>Utilizado: 4.284.600 MT</span><span>8.000.000 MT</span></div></aside></section></main>{open&&<Wizard step={step} setStep={setStep} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination} traveller={traveller} setTraveller={setTraveller} reason={reason} setReason={setReason} options={options} transport={transport} setTransport={setTransport} hotel={hotel} setHotel={setHotel} food={food} setFood={setFood} total={total} close={close} submit={submit}/>}</div>
 }
-
-function TravelHome() {
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [step, setStep] = useState<Step>(1);
-  const [transport, setTransport] = useState(true);
-  const [hotel, setHotel] = useState(true);
-  const [vehicle, setVehicle] = useState(vehicles[1]);
-  const [hotelChoice, setHotelChoice] = useState(hotels[0]);
-  const [origin, setOrigin] = useState("Nampula");
-  const [destination, setDestination] = useState("Maputo");
-  const [traveller, setTraveller] = useState("");
-  const [reason, setReason] = useState("");
-
-  const total = useMemo(() => {
-    const nights = 3;
-    const days = 4;
-    return (transport ? vehicle.price * days : 0) + (hotel ? hotelChoice.price * nights : 0);
-  }, [transport, hotel, vehicle, hotelChoice]);
-
-  function resetWizard() {
-    setStep(1);
-    setTransport(true);
-    setHotel(true);
-    setTraveller("");
-    setReason("");
-  }
-
-  function closeWizard() {
-    setWizardOpen(false);
-    resetWizard();
-  }
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f6] text-[#252525]">
-      <header className="sticky top-0 z-30 border-b border-[#e6e3de] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#CD0219] text-sm font-bold text-white">CT</div>
-            <div>
-              <div className="font-semibold tracking-tight">Corporate Travel</div>
-              <div className="text-[11px] text-[#77736d]">Gestão de viagens empresariais</div>
-            </div>
-          </div>
-          <nav className="hidden items-center gap-7 text-sm text-[#62605b] md:flex">
-            <span className="font-medium text-[#252525]">Visão geral</span>
-            <span>Pedidos</span>
-            <span>Faturas</span>
-            <span>Relatórios</span>
-          </nav>
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block"><div className="text-sm font-medium">Empresa Exemplo, Lda.</div><div className="text-[11px] text-[#77736d]">Aprovador financeiro</div></div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#eeeae5] text-sm font-semibold">EE</div>
-            <button className="md:hidden" aria-label="Abrir menu"><Menu size={20} /></button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1400px] px-5 py-7 lg:px-8 lg:py-9">
-        <section className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <p className="mb-2 text-sm font-medium text-[#CD0219]">Painel da empresa</p>
-            <h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">Bom dia. O que precisa de organizar?</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#706d67]">Monte uma viagem completa num único pedido. A agência prepara a cotação e acompanha o processo consigo.</p>
-          </div>
-          <button onClick={() => setWizardOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#CD0219] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#a90115]">
-            <Plus size={18} /> Novo Pedido de Viagem
-          </button>
-        </section>
-
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric icon={ReceiptText} label="Pedidos este mês" value="18" detail="+4 face ao mês anterior" />
-          <Metric icon={CircleDollarSign} label="Gasto este mês" value="1.284.600 MZN" detail="23% do orçamento mensal" />
-          <Metric icon={FileText} label="Faturas pendentes" value="4" detail="2 vencem esta semana" alert />
-          <Metric icon={CalendarDays} label="Próximas viagens" value="7" detail="Nos próximos 30 dias" />
-        </section>
-
-        <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_330px]">
-          <div className="overflow-hidden rounded-xl border border-[#e5e2dc] bg-white">
-            <div className="flex items-center justify-between border-b border-[#ece9e4] px-5 py-4">
-              <div><h2 className="font-semibold">Pedidos recentes</h2><p className="mt-0.5 text-xs text-[#817d76]">Acompanhe os pedidos da sua empresa</p></div>
-              <button className="text-xs font-semibold text-[#CD0219]">Ver todos</button>
-            </div>
-            <div className="divide-y divide-[#efede9]">
-              {recentRequests.map((request) => (
-                <div key={request.id} className="grid gap-3 px-5 py-4 md:grid-cols-[110px_1fr_120px_145px] md:items-center">
-                  <div className="text-xs font-semibold text-[#6e6a64]">{request.id}</div>
-                  <div><div className="text-sm font-medium">{request.trip}</div><div className="mt-1 text-xs text-[#817d76]">{request.person} · {request.date}</div></div>
-                  <div className="text-sm font-semibold md:text-right">{request.total}</div>
-                  <div className="md:text-right"><Status label={request.status} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <aside className="rounded-xl border border-[#e5e2dc] bg-white p-5">
-            <h2 className="font-semibold">Limite de crédito</h2>
-            <p className="mt-1 text-xs text-[#817d76]">Condições atuais da sua empresa</p>
-            <div className="mt-6 flex items-end justify-between"><span className="text-xs text-[#706d67]">Disponível</span><span className="text-lg font-semibold">3.715.400 MZN</span></div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#eeeae5]"><div className="h-full w-[54%] rounded-full bg-[#CD0219]" /></div>
-            <div className="mt-2 flex justify-between text-[11px] text-[#817d76]"><span>Utilizado: 4.284.600 MZN</span><span>8.000.000 MZN</span></div>
-            <div className="mt-6 border-t border-[#ece9e4] pt-5"><div className="text-xs text-[#817d76]">Prazo de pagamento</div><div className="mt-1 text-sm font-medium">30 dias após faturação</div></div>
-          </aside>
-        </section>
-
-        <section className="mt-8 rounded-xl border border-[#e5e2dc] bg-white p-5 lg:p-6">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center"><div><h2 className="font-semibold">Acesso rápido</h2><p className="mt-1 text-xs text-[#817d76]">As tarefas mais frequentes da sua equipa</p></div></div>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <QuickAction icon={Plus} title="Novo pedido" description="Organizar uma nova viagem" onClick={() => setWizardOpen(true)} />
-            <QuickAction icon={FileText} title="Cotações para aprovar" description="2 aguardam a sua decisão" />
-            <QuickAction icon={ReceiptText} title="Faturas" description="Consultar pagamentos e vencimentos" />
-          </div>
-        </section>
-      </main>
-
-      {wizardOpen && <Wizard step={step} setStep={setStep} onClose={closeWizard} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination} traveller={traveller} setTraveller={setTraveller} reason={reason} setReason={setReason} transport={transport} setTransport={setTransport} hotel={hotel} setHotel={setHotel} vehicle={vehicle} setVehicle={setVehicle} hotelChoice={hotelChoice} setHotelChoice={setHotelChoice} total={total} />}
-    </div>
-  );
-}
-
-function Metric({ icon: Icon, label, value, detail, alert = false }: { icon: typeof ReceiptText; label: string; value: string; detail: string; alert?: boolean }) {
-  return <div className="rounded-xl border border-[#e5e2dc] bg-white p-5"><div className="flex items-center justify-between"><span className="text-xs font-medium text-[#77736d]">{label}</span><Icon size={18} className={alert ? "text-[#CD0219]" : "text-[#77736d]"} /></div><div className="mt-3 text-xl font-semibold tracking-tight">{value}</div><div className={"mt-1 text-[11px] " + (alert ? "text-[#CD0219]" : "text-[#817d76]")}>{detail}</div></div>;
-}
-
-function Status({ label }: { label: string }) {
-  const positive = label === "Aprovado";
-  const attention = label === "Aguardando aprovação";
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${positive ? "bg-[#e8f3eb] text-[#247342]" : attention ? "bg-[#fff3d9] text-[#8b6500]" : "bg-[#f0eeeb] text-[#625f59]"}`}>{label}</span>;
-}
-
-function QuickAction({ icon: Icon, title, description, onClick }: { icon: typeof Plus; title: string; description: string; onClick?: () => void }) {
-  return <button onClick={onClick} className="group flex items-center justify-between rounded-lg border border-[#e8e5df] p-4 text-left transition hover:border-[#CD0219]/40 hover:bg-[#fffafa]"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f4f1ed] text-[#CD0219]"><Icon size={17} /></div><div><div className="text-sm font-medium">{title}</div><div className="mt-0.5 text-xs text-[#817d76]">{description}</div></div></div><ArrowRight size={16} className="text-[#aaa49b] transition group-hover:translate-x-0.5 group-hover:text-[#CD0219]" /></button>;
-}
-
-function Wizard(props: {
-  step: Step; setStep: (step: Step) => void; onClose: () => void;
-  origin: string; setOrigin: (v: string) => void; destination: string; setDestination: (v: string) => void;
-  traveller: string; setTraveller: (v: string) => void; reason: string; setReason: (v: string) => void;
-  transport: boolean; setTransport: (v: boolean) => void; hotel: boolean; setHotel: (v: boolean) => void;
-  vehicle: typeof vehicles[number]; setVehicle: (v: typeof vehicles[number]) => void;
-  hotelChoice: typeof hotels[number]; setHotelChoice: (v: typeof hotels[number]) => void; total: number;
-}) {
-  const { step, setStep, onClose } = props;
-  const next = () => setStep(Math.min(5, step + 1) as Step);
-  const back = () => setStep(Math.max(1, step - 1) as Step);
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#171717]/45 p-0 backdrop-blur-[2px] md:items-center md:p-6">
-    <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl md:h-[850px] md:rounded-2xl">
-      <div className="flex items-center justify-between border-b border-[#e7e4df] px-5 py-4 lg:px-7"><div><div className="text-xs font-medium text-[#CD0219]">Novo pedido de viagem</div><h2 className="mt-0.5 text-lg font-semibold">Monte o pedido passo a passo</h2></div><button onClick={onClose} className="rounded-lg p-2 text-[#77736d] hover:bg-[#f4f2ef]" aria-label="Fechar"><X size={20} /></button></div>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="hidden w-60 shrink-0 border-r border-[#e7e4df] bg-[#faf9f7] p-5 md:block"><div className="space-y-1">{steps.map((item) => { const Icon = item.icon; const active = step === item.id; const done = step > item.id; return <button key={item.id} onClick={() => setStep(item.id)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm ${active ? "bg-white font-semibold text-[#CD0219] shadow-sm" : "text-[#77736d] hover:bg-white"}`}><span className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${done ? "border-[#2f7a48] bg-[#e8f3eb] text-[#2f7a48]" : active ? "border-[#CD0219] text-[#CD0219]" : "border-[#d9d5cf]"}`}>{done ? <Check size={14} /> : <Icon size={14} />}</span>{item.label}</button>; })}</div></div>
-        <div className="flex min-h-0 flex-1 flex-col"><div className="border-b border-[#eeeae5] px-5 py-3 md:hidden"><div className="flex items-center gap-2 text-xs font-medium text-[#CD0219]">Passo {step} de 5 <span className="text-[#aaa49b]">·</span> {steps[step - 1].label}</div><div className="mt-2 h-1 overflow-hidden rounded-full bg-[#eeeae5]"><div className="h-full rounded-full bg-[#CD0219]" style={{ width: `${step * 20}%` }} /></div></div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 lg:px-8">
-            {step === 1 && <StepOne {...props} />}
-            {step === 2 && <StepTwo {...props} />}
-            {step === 3 && <StepThree {...props} />}
-            {step === 4 && <StepFour />}
-            {step === 5 && <StepFive {...props} />}
-          </div>
-          <div className="flex items-center justify-between border-t border-[#e7e4df] px-5 py-4 lg:px-8"><button onClick={step === 1 ? onClose : back} className="inline-flex items-center gap-2 rounded-lg border border-[#ddd9d3] px-4 py-2.5 text-sm font-medium hover:bg-[#f7f5f2]">{step === 1 ? "Cancelar" : <><ChevronLeft size={16} /> Voltar</>}</button>{step < 5 ? <button onClick={next} className="inline-flex items-center gap-2 rounded-lg bg-[#CD0219] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#a90115]">Continuar <ChevronRight size={16} /></button> : <button onClick={onClose} className="inline-flex items-center gap-2 rounded-lg bg-[#CD0219] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#a90115]">Enviar Pedido de Cotação <ArrowRight size={16} /></button>}</div>
-        </div>
-        <aside className="hidden w-72 shrink-0 border-l border-[#e7e4df] bg-[#faf9f7] p-5 lg:block"><div className="text-xs font-semibold uppercase tracking-wide text-[#817d76]">Resumo do pedido</div><div className="mt-5 space-y-4"><SummaryLine label="Deslocação" value={`${props.origin} → ${props.destination}`} /><SummaryLine label="Transporte" value={props.transport ? `${props.vehicle.name} · 4 dias` : "Não necessário"} price={props.transport ? money(props.vehicle.price * 4) : undefined} /><SummaryLine label="Hospedagem" value={props.hotel ? `${props.hotelChoice.name} · 3 noites` : "Não necessária"} price={props.hotel ? money(props.hotelChoice.price * 3) : undefined} /><SummaryLine label="Alimentação" value="A configurar" /></div><div className="mt-7 border-t border-[#dedad4] pt-5"><div className="flex items-center justify-between"><span className="text-sm font-medium">Subtotal</span><span className="text-lg font-semibold">{money(props.total)}</span></div><p className="mt-2 text-[11px] leading-4 text-[#817d76]">Os valores apresentados são baseados no catálogo atual e serão confirmados na cotação da agência.</p></div></aside>
-      </div>
-    </div>
-  </div>;
-}
-
-function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-medium text-[#4f4c47]">{label}</span><input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-11 w-full rounded-lg border border-[#dcd8d1] bg-white px-3 text-sm outline-none transition placeholder:text-[#aaa49b] focus:border-[#CD0219] focus:ring-2 focus:ring-[#CD0219]/10" /></label>;
-}
-
-function StepOne(props: any) {
-  return <div className="mx-auto max-w-2xl"><StepTitle eyebrow="Passo 1" title="Para onde é a viagem?" text="Comece com os dados básicos. Poderá ajustar os detalhes antes de enviar o pedido." /><div className="mt-7 grid gap-4 sm:grid-cols-2"><Field label="Origem" value={props.origin} onChange={props.setOrigin} placeholder="Cidade ou província" /><Field label="Destino" value={props.destination} onChange={props.setDestination} placeholder="Cidade ou província" /><Field label="Data de ida" value="18/09/2026" onChange={() => {}} /><Field label="Data de volta" value="21/09/2026" onChange={() => {}} /></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Motivo da viagem" value={props.reason} onChange={props.setReason} placeholder="Ex.: Visita ao projeto de Nampula" /><Field label="Colaborador que vai viajar" value={props.traveller} onChange={props.setTraveller} placeholder="Nome completo" /></div><div className="mt-5 rounded-lg border border-[#e7e4df] bg-[#faf9f7] p-4 text-xs leading-5 text-[#706d67]">O pedido pode ser criado por um colega em nome de outra pessoa. O colaborador indicado será associado à viagem.</div></div>;
-}
-
-function Choice({ active, title, text, onClick }: { active: boolean; title: string; text: string; onClick: () => void }) {
-  return <button onClick={onClick} className={`rounded-xl border p-5 text-left transition ${active ? "border-[#CD0219] bg-[#fff8f8] ring-1 ring-[#CD0219]" : "border-[#e1ddd7] bg-white hover:border-[#bbb6ae]"}`}><div className="flex items-center justify-between"><span className="font-semibold">{title}</span><span className={`h-4 w-4 rounded-full border-2 ${active ? "border-[#CD0219] bg-[#CD0219]" : "border-[#c7c2ba]"}`} /></div><p className="mt-1 text-xs text-[#817d76]">{text}</p></button>;
-}
-
-function StepTwo(props: any) {
-  return <div className="mx-auto max-w-3xl"><StepTitle eyebrow="Passo 2" title="Vai precisar de carro no destino?" text="Escolha um veículo disponível na região. O número de dias é calculado a partir da viagem." /><div className="mt-7 grid gap-3 sm:grid-cols-2"><Choice active={props.transport} title="Sim" text="Preciso de transporte no destino" onClick={() => props.setTransport(true)} /><Choice active={!props.transport} title="Não" text="Vou organizar o transporte por conta própria" onClick={() => props.setTransport(false)} /></div>{props.transport && <div className="mt-7"><div className="mb-3 text-sm font-semibold">Veículos disponíveis</div><div className="grid gap-4 md:grid-cols-3">{vehicles.map((v) => <button key={v.name} onClick={() => props.setVehicle(v)} className={`overflow-hidden rounded-xl border text-left transition ${props.vehicle.name === v.name ? "border-[#CD0219] ring-1 ring-[#CD0219]" : "border-[#e1ddd7] hover:border-[#bbb6ae]"}`}><img src={v.image} alt={v.name} className="h-32 w-full object-cover" /><div className="p-3"><div className="text-sm font-semibold">{v.name}</div><div className="mt-1 text-[11px] text-[#817d76]">{v.category} · {v.capacity}</div><div className="mt-3 text-sm font-semibold">{money(v.price)} <span className="font-normal text-[#817d76]">/ dia</span></div></div></button>)}</div></div>}</div>;
-}
-
-function StepThree(props: any) {
-  return <div className="mx-auto max-w-3xl"><StepTitle eyebrow="Passo 3" title="Vai precisar de hospedagem?" text="As opções apresentadas correspondem à região do destino." /><div className="mt-7 grid gap-3 sm:grid-cols-2"><Choice active={props.hotel} title="Sim" text="Preciso de hospedagem" onClick={() => props.setHotel(true)} /><Choice active={!props.hotel} title="Não" text="Não preciso de hospedagem" onClick={() => props.setHotel(false)} /></div>{props.hotel && <div className="mt-7"><div className="mb-3 text-sm font-semibold">Opções disponíveis</div><div className="grid gap-4 md:grid-cols-3">{hotels.map((h) => <button key={h.name} onClick={() => props.setHotelChoice(h)} className={`overflow-hidden rounded-xl border text-left transition ${props.hotelChoice.name === h.name ? "border-[#CD0219] ring-1 ring-[#CD0219]" : "border-[#e1ddd7] hover:border-[#bbb6ae]"}`}><img src={h.image} alt={h.name} className="h-32 w-full object-cover" /><div className="p-3"><div className="text-sm font-semibold">{h.name}</div><div className="mt-1 text-[11px] text-[#817d76]">{h.location}</div><div className="mt-2 inline-flex rounded-full bg-[#f0eee9] px-2 py-1 text-[10px] font-medium text-[#66625c]">{h.badge}</div><div className="mt-3 text-sm font-semibold">{money(h.price)} <span className="font-normal text-[#817d76]">/ noite</span></div></div></button>)}</div></div>}</div>;
-}
-
-function StepFour() {
-  const places = ["Restaurante", "Lanchonete", "Take-away"];
-  return <div className="mx-auto max-w-3xl"><StepTitle eyebrow="Passo 4" title="Vai precisar de alimentação?" text="Escolha onde prefere comer e depois selecione os pratos do cardápio." /><div className="mt-7 grid gap-3 sm:grid-cols-3">{places.map((p, i) => <button key={p} className={`rounded-xl border p-5 text-left ${i === 0 ? "border-[#CD0219] bg-[#fff8f8]" : "border-[#e1ddd7]"}`}><div className="font-semibold">{p}</div><div className="mt-1 text-xs text-[#817d76]">Estabelecimentos disponíveis no destino</div></button>)}</div><div className="mt-7 rounded-xl border border-[#e7e4df] bg-[#faf9f7] p-5"><div className="text-sm font-semibold">Restaurantes em {"Maputo"}</div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-lg bg-white p-4"><div className="text-sm font-medium">Costa do Sol</div><div className="mt-1 text-xs text-[#817d76]">Cardápio disponível · 12 pratos</div></div><div className="rounded-lg bg-white p-4"><div className="text-sm font-medium">Zambi</div><div className="mt-1 text-xs text-[#817d76]">Cardápio disponível · 9 pratos</div></div></div></div></div>;
-}
-
-function StepFive(props: any) {
-  return <div className="mx-auto max-w-3xl"><StepTitle eyebrow="Passo 5" title="Revise o pedido antes de enviar" text="Pode voltar a qualquer passo para alterar os dados." /><div className="mt-7 overflow-hidden rounded-xl border border-[#e1ddd7]"><ReviewRow label="Deslocação" value={`${props.origin} → ${props.destination}`} /><ReviewRow label="Transporte" value={props.transport ? `${props.vehicle.name} × 4 dias` : "Não necessário"} price={props.transport ? money(props.vehicle.price * 4) : "—"} /><ReviewRow label="Hospedagem" value={props.hotel ? `${props.hotelChoice.name} × 3 noites` : "Não necessária"} price={props.hotel ? money(props.hotelChoice.price * 3) : "—"} /><ReviewRow label="Alimentação" value="A configurar na cotação" price="—" /><div className="flex items-center justify-between bg-[#faf9f7] px-4 py-5"><span className="font-semibold">Total estimado</span><span className="text-xl font-semibold">{money(props.total)}</span></div></div><div className="mt-5"><label className="block text-xs font-medium text-[#4f4c47]">Observação para a agência <span className="font-normal text-[#817d76]">(opcional)</span></label><textarea placeholder="Ex.: Precisa de hotel com estacionamento" className="mt-1.5 min-h-28 w-full rounded-lg border border-[#dcd8d1] p-3 text-sm outline-none focus:border-[#CD0219] focus:ring-2 focus:ring-[#CD0219]/10" /></div><div className="mt-5 rounded-lg border border-[#ead7d9] bg-[#fff8f8] p-4 text-xs leading-5 text-[#6f5558]">Ao enviar, o pedido passa para <strong>Aguardando Revisão da Agência</strong>. A agência poderá ajustar os valores e enviará uma cotação formal para aprovação.</div></div>;
-}
-
-function StepTitle({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
-  return <div><div className="text-xs font-semibold uppercase tracking-wide text-[#CD0219]">{eyebrow}</div><h3 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h3><p className="mt-2 max-w-xl text-sm leading-6 text-[#77736d]">{text}</p></div>;
-}
-
-function SummaryLine({ label, value, price }: { label: string; value: string; price?: string }) {
-  return <div><div className="text-[11px] font-medium uppercase tracking-wide text-[#9a958d]">{label}</div><div className="mt-1 text-xs font-medium leading-5">{value}</div>{price && <div className="mt-0.5 text-xs font-semibold">{price}</div>}</div>;
-}
-
-function ReviewRow({ label, value, price }: { label: string; value: string; price?: string }) {
-  return <div className="flex items-center justify-between gap-5 border-b border-[#eeeae5] px-4 py-4 last:border-0"><div><div className="text-xs font-medium text-[#817d76]">{label}</div><div className="mt-1 text-sm font-medium">{value}</div></div>{price && <div className="shrink-0 text-sm font-semibold">{price}</div>}</div>;
-}
+function Metric({icon:Icon,label,value,detail,alert=false}:{icon:any;label:string;value:string;detail:string;alert?:boolean}){return <div className="rounded-xl border border-[#e5e2dc] bg-white p-5"><div className="flex justify-between text-xs text-[#77736d]"><span>{label}</span><Icon size={18} className={alert?"text-[#CD0219]":""}/></div><div className="mt-3 text-xl font-semibold">{value}</div><div className={`mt-1 text-[11px] ${alert?"text-[#CD0219]":"text-[#817d76]"}`}>{detail}</div></div>}
+function Status({label}:{label:string}){const c=label==="Aprovado"?"bg-[#e8f3eb] text-[#267244]":label.startsWith("Aguardando")?"bg-[#fff3d9] text-[#8b6500]":"bg-[#f0eeeb] text-[#625f59]";return <span className={`w-fit rounded-full px-2.5 py-1 text-[11px] font-medium ${c}`}>{label}</span>}
+function Wizard(p:any){const [foodType,setFoodType]=useState("Restaurante");const [dishes,setDishes]=useState<Dish[]>([]);useEffect(()=>{if(p.food){setDishes(getCatalog().pratos.filter(x=>x.estabelecimento_id===p.food.id&&x.estado==="Disponível").sort((a,b)=>a.ordem-b.ordem))}},[p.food]);const next=()=>p.setStep(Math.min(5,p.step+1) as Step),back=()=>p.setStep(Math.max(1,p.step-1) as Step);return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-center md:p-6"><div className="flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl md:h-[850px] md:rounded-2xl"><div className="flex items-center justify-between border-b px-5 py-4"><div><div className="text-xs font-semibold text-[#CD0219]">Novo pedido de viagem</div><h2 className="mt-1 font-semibold">Monte o pedido passo a passo</h2></div><button onClick={p.close}><X size={20}/></button></div><div className="flex min-h-0 flex-1"><aside className="hidden w-56 border-r bg-[#faf9f7] p-4 md:block">{steps.map(s=><button key={s.id} onClick={()=>p.setStep(s.id)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm ${p.step===s.id?"bg-white font-semibold text-[#CD0219]":"text-[#77736d]"}`}><span className="flex h-7 w-7 items-center justify-center rounded-full border">{p.step>s.id?<Check size={14}/>:<s.icon size={14}/>}</span>{s.label}</button>)}</aside><div className="flex min-w-0 flex-1 flex-col"><div className="border-b px-5 py-3 text-xs text-[#CD0219] md:hidden">Passo {p.step} de 5 · {steps[p.step-1].label}</div><div className="flex-1 overflow-y-auto px-5 py-7 lg:px-8">{p.step===1&&<StepOne {...p}/>} {p.step===2&&<StepTransport {...p}/>} {p.step===3&&<StepHotel {...p}/>} {p.step===4&&<StepFood {...p} foodType={foodType} setFoodType={setFoodType} dishes={dishes}/>} {p.step===5&&<StepReview {...p}/>}</div><div className="flex justify-between border-t px-5 py-4"><button onClick={p.step===1?p.close:back} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">{p.step===1?"Cancelar":<><ChevronLeft size={16}/> Voltar</>}</button>{p.step<5?<button onClick={next} className="inline-flex items-center gap-2 rounded-lg bg-[#CD0219] px-5 py-2.5 text-sm font-semibold text-white">Continuar <ChevronRight size={16}/></button>:<button onClick={p.submit} className="inline-flex items-center gap-2 rounded-lg bg-[#CD0219] px-5 py-2.5 text-sm font-semibold text-white">Enviar Pedido <ArrowRight size={16}/></button>}</div></div><aside className="hidden w-72 border-l bg-[#faf9f7] p-5 lg:block"><div className="text-xs font-semibold uppercase text-[#817d76]">Resumo</div><div className="mt-5 space-y-4"><Summary label="Deslocação" value={`${p.origin} → ${p.destination}`}/><Summary label="Transporte" value={p.transport?`${p.transport.nome} · 4 dias`:"Não selecionado"} price={p.transport?money(p.transport.preco_dia*4):undefined}/><Summary label="Hospedagem" value={p.hotel?`${p.hotel.nome} · 3 noites`:"Não selecionada"} price={p.hotel?money(p.hotel.preco_noite*3):undefined}/><Summary label="Alimentação" value={p.food?p.food.nome:"Não selecionada"}/></div><div className="mt-7 border-t pt-5 flex justify-between font-semibold"><span>Estimado</span><span>{money(p.total)}</span></div></aside></div></div></div>}
+function Empty({type,region}:{type:string;region:string}){return <div className="rounded-xl border border-dashed border-[#d9d5cf] bg-[#faf9f7] p-8 text-center"><div className="text-sm font-semibold">Ainda não temos opções de {type} cadastradas para {region}.</div><p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-[#77736d]">A nossa equipa vai entrar em contacto para resolver isto diretamente. Pode avançar com o pedido mesmo assim.</p><div className="mt-3 text-[11px] text-[#CD0219]">Será anexada uma nota automática para o administrador.</div></div>}
+function StepTitle({n,title,text}:{n:number;title:string;text:string}){return <div><div className="text-xs font-semibold uppercase tracking-wide text-[#CD0219]">Passo {n}</div><h3 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h3><p className="mt-2 text-sm leading-6 text-[#77736d]">{text}</p></div>}
+function Input({label,value,onChange,placeholder}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string}){return <label className="block text-xs font-medium">{label}<input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className="mt-1.5 h-11 w-full rounded-lg border border-[#dcd8d1] px-3 text-sm outline-none focus:border-[#CD0219]"/></label>}
+function StepOne(p:any){return <div className="mx-auto max-w-2xl"><StepTitle n={1} title="Para onde é a viagem?" text="Indique origem, destino e os dados básicos da deslocação."/><div className="mt-7 grid gap-4 sm:grid-cols-2"><Input label="Origem" value={p.origin} onChange={p.setOrigin}/><Input label="Destino" value={p.destination} onChange={p.setDestination}/><Input label="Data de ida" value="18/09/2026" onChange={()=>{}}/><Input label="Data de volta" value="21/09/2026" onChange={()=>{}}/><Input label="Motivo da viagem" value={p.reason} onChange={p.setReason} placeholder="Ex.: Reunião com cliente"/><Input label="Colaborador" value={p.traveller} onChange={p.setTraveller} placeholder="Nome completo"/></div></div>}
+function Card({selected,onClick,img,title,meta,price,extra}:{selected:boolean;onClick:()=>void;img?:string;title:string;meta:string;price:string;extra?:string}){return <button onClick={onClick} className={`overflow-hidden rounded-xl border text-left transition ${selected?"border-[#CD0219] ring-1 ring-[#CD0219]":"border-[#e1ddd7] hover:border-[#bbb6ae]"}`}>{img?<img src={img} className="h-36 w-full object-cover"/>:<div className="h-36 bg-[#f1eee9]"/>}<div className="p-4"><div className="font-semibold">{title}</div><div className="mt-1 text-xs text-[#817d76]">{meta}</div>{extra&&<div className="mt-2 text-[10px] text-[#625f59]">{extra}</div>}<div className="mt-3 text-sm font-semibold">{price}</div></div></button>}
+function StepTransport(p:any){return <div className="mx-auto max-w-3xl"><StepTitle n={2} title="Vai precisar de carro no destino?" text={`Opções ativas cadastradas para ${p.destination}.`}/><div className="mt-7 grid gap-4 sm:grid-cols-3">{p.options.veiculos.map((v:Vehicle)=><Card key={v.id} selected={p.transport?.id===v.id} onClick={()=>p.setTransport(v)} img={v.fotos[0]} title={v.nome} meta={`${v.categoria} · ${v.capacidade} passageiros`} price={`${money(v.preco_dia)} / dia`} extra={v.com_motorista?"Motorista incluído":"Sem motorista"}/>)}</div>{!p.options.veiculos.length&&<div className="mt-5"><Empty type="transporte" region={p.destination}/></div>}</div>}
+function StepHotel(p:any){return <div className="mx-auto max-w-3xl"><StepTitle n={3} title="Vai precisar de hospedagem?" text={`Opções ativas cadastradas para ${p.destination}.`}/><div className="mt-7 grid gap-4 md:grid-cols-3">{p.options.hospedagens.map((h:Accommodation)=><Card key={h.id} selected={p.hotel?.id===h.id} onClick={()=>p.setHotel(h)} img={h.fotos[0]} title={h.nome} meta={`${h.tipo} · ${h.bairro}`} price={`${money(h.preco_noite)} / noite`} extra={h.comodidades.join(" · ")}/>)}</div>{!p.options.hospedagens.length&&<div className="mt-5"><Empty type="hospedagem" region={p.destination}/></div>}</div>}
+function StepFood(p:any){const cats=["Pequeno-almoço","Entrada","Prato principal","Sobremesa","Bebida"];return <div className="mx-auto max-w-3xl"><StepTitle n={4} title="Vai precisar de alimentação?" text={`Estabelecimentos ativos com cardápio disponível em ${p.destination}.`}/><div className="mt-7 flex gap-2 overflow-x-auto">{["Restaurante","Lanchonete","Take-away"].map((t)=><button key={t} onClick={()=>p.setFoodType(t)} className={`rounded-lg border px-4 py-2 text-sm ${p.foodType===t?"border-[#CD0219] bg-[#fff8f8] text-[#CD0219]":"border-[#ddd9d3]"}`}>{t}</button>)}</div><div className="mt-5 grid gap-4 md:grid-cols-3">{p.options.estabelecimentos.filter((e:FoodEstablishment)=>e.tipo===p.foodType).map((e:FoodEstablishment)=><Card key={e.id} selected={p.food?.id===e.id} onClick={()=>p.setFood(e)} img={e.fotos[0]} title={e.nome} meta={`${e.tipo} · ${e.bairro}`} price="Cardápio disponível"/>)}</div>{!p.options.estabelecimentos.filter((e:FoodEstablishment)=>e.tipo===p.foodType).length&&<Empty type="alimentação" region={p.destination}/>} {p.food&&<div className="mt-6 rounded-xl border bg-[#faf9f7] p-5"><div className="font-semibold">Cardápio de {p.food.nome}</div>{p.dishes.length?cats.map((cat:string)=>{const list=p.dishes.filter((d:Dish)=>d.categoria_prato===cat);return list.length?<div key={cat} className="mt-5"><div className="text-xs font-semibold uppercase text-[#817d76]">{cat}</div>{list.map((d:Dish)=><div key={d.id} className="flex items-center justify-between border-b py-3"><div><div className="text-sm font-medium">{d.nome}</div>{d.descricao&&<div className="text-xs text-[#817d76]">{d.descricao}</div>}</div><span className="text-sm font-semibold">{money(d.preco)}</span></div>)}</div>:null}):<Empty type="pratos" region={p.food.nome}/>}</div>}</div>}
+function StepReview(p:any){return <div className="mx-auto max-w-3xl"><StepTitle n={5} title="Revise o pedido antes de enviar" text="Os preços selecionados ficam guardados como snapshot no pedido e não são recalculados retroativamente."/><div className="mt-7 divide-y rounded-xl border bg-white"><Summary label="Deslocação" value={`${p.origin} → ${p.destination}`}/><Summary label="Transporte" value={p.transport?p.transport.nome:"Não selecionado"} price={p.transport?money(p.transport.preco_dia*4):"—"}/><Summary label="Hospedagem" value={p.hotel?p.hotel.nome:"Não selecionada"} price={p.hotel?money(p.hotel.preco_noite*3):"—"}/><Summary label="Alimentação" value={p.food?p.food.nome:"Não selecionada"}/><div className="flex justify-between bg-[#faf9f7] px-4 py-5 font-semibold"><span>Total estimado</span><span>{money(p.total)}</span></div></div></div>}
+function Summary({label,value,price}:{label:string;value:string;price?:string}){return <div className="flex items-center justify-between gap-4 px-4 py-4"><div><div className="text-[11px] uppercase text-[#9a958d]">{label}</div><div className="mt-1 text-sm font-medium">{value}</div></div>{price&&<div className="text-sm font-semibold">{price}</div>}</div>}
